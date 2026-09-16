@@ -5,6 +5,8 @@
   <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
   <script lang="javascript" src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#111111">
   <title>BreakAway Futsal: Time</title>
 </head>
 <body>
@@ -270,7 +272,7 @@
               <th colspan="2" class="hdr-rems">Remates Sofridos</th>
               <th colspan="4" class="hdr-pass">Passes negativos</th>
               <th colspan="4" class="hdr-rob">Perdas de bola</th>
-	      <th colspan="1" class="hdr-int">Intercepção/Desarme</th>
+              <th colspan="1" class="hdr-int">Intercepção/Desarme</th>
             </tr>
             <tr>
               <th class="sub-rem">Remates</th>
@@ -305,6 +307,19 @@
     </div>
   </div>
 
-</body>
 <script src="main.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js")
+        .then(function () {
+          console.log("BreakAway Futsal: modo offline ativo.");
+        })
+        .catch(function (error) {
+          console.error("BreakAway Futsal: erro no modo offline.", error);
+        });
+    });
+  }
+</script>
+</body>
 </html>
