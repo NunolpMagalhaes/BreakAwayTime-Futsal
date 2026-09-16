@@ -1,4 +1,4 @@
-const CACHE_NAME = "breakaway-futsal-offline-v5";
+const CACHE_NAME = "breakaway-futsal-offline-v6";
 
 const APP_FILES = [
   "./",
@@ -14,24 +14,10 @@ const APP_FILES = [
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-
     for (const file of APP_FILES) {
-      try {
-        await cache.add(file);
-      } catch (error) {
-        console.warn("Offline cache: não foi possível guardar", file, error);
-      }
+      try { await cache.add(file); }
+      catch (error) { console.warn("Offline cache: não foi possível guardar", file, error); }
     }
-
-    for (const url of EXTERNAL_FILES) {
-      try {
-        const response = await fetch(url, { mode: "no-cors", cache: "no-cache" });
-        await cache.put(url, response);
-      } catch (error) {
-        console.warn("Offline cache: não foi possível guardar", url, error);
-      }
-    }
-
     await self.skipWaiting();
   })());
 });
@@ -39,11 +25,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(
-      keys
-        .filter(key => key !== CACHE_NAME)
-        .map(key => caches.delete(key))
-    );
+    await Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
     await self.clients.claim();
   })());
 });
@@ -53,49 +35,37 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET") return;
 
   event.respondWith((async () => {
-    const cached = await caches.match(request);
+    let response = await caches.match(request);
 
-    if (cached) {
-      const url = new URL(request.url);
-
-      // Keep the file input visually hidden, but not display:none.
-      // This makes Android's native file picker open reliably in offline/PWA mode.
-      if (url.pathname.endsWith("/style.css")) {
-        try {
-          const css = await cached.text();
-          const fixedCss = css.replace(
-            ".head-input { display: none; }",
-            ".head-input { position: absolute; width: 1px; height: 1px; opacity: 0; }"
-          );
-          return new Response(fixedCss, {
-            headers: { "Content-Type": "text/css; charset=utf-8" }
-          });
-        } catch (error) {
-          console.warn("Offline CSS adjustment failed", error);
+    if (!response) {
+      try {
+        response = await fetch(request);
+        if (response.ok || response.type === "opaque") {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, response.clone());
         }
+      } catch (error) {
+        if (request.mode === "navigate") response = await caches.match("./index.html");
       }
-
-      if (url.pathname.endsWith("/libs/xlsx.full.min.js")) {
-        const external = await caches.match("https://unpkg.com/xlsx/dist/xlsx.full.min.js");
-        if (external) return external;
-      }
-
-      return cached;
     }
 
-    try {
-      const response = await fetch(request);
-      if (response.ok || response.type === "opaque") {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, response.clone());
-      }
-      return response;
-    } catch (error) {
-      if (request.mode === "navigate") {
-        const fallback = await caches.match("./index.html");
-        if (fallback) return fallback;
-      }
-      throw error;
+    if (!response) throw new Error("Offline resource unavailable");
+
+    // Do not use display:none for the file inputs. On some Android PWA/WebView
+    // configurations that prevents the native file picker from opening offline.
+    if (new URL(request.url).pathname.endsWith("/style.css")) {
+      const css = await response.text();
+      const fixedCss = css.replace(
+        ".head-input { display: none; }",
+        ".head-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }\n.load-file { position: relative; }"
+      );
+      return new Response(fixedCss, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: { "Content-Type": "text/css; charset=utf-8" }
+      });
     }
+
+    return response;
   })());
 });
