@@ -11,12 +11,6 @@ const APP_FILES = [
   "./libs/FileSaver.min.js"
 ];
 
-const EXTERNAL_FILES = [
-  "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js",
-  "https://unpkg.com/xlsx/dist/xlsx.full.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"
-];
-
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
