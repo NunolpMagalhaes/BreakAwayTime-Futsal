@@ -1,0 +1,11 @@
+{
+  "name": "BreakAway Time: Futsal",
+  "short_name": "BreakAway Futsal",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "description": "BreakAway Time: Futsal — aplicação de apoio à análise e controlo de jogo.",
+  "icons": []
+}
