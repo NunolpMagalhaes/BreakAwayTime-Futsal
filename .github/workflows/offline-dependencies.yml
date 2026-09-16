@@ -1,0 +1,64 @@
+name: Prepare offline dependencies
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download exact library versions
+        run: |
+          mkdir -p libs
+          curl -L --fail --retry 3 -o libs/jquery.min.js https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js
+          curl -L --fail --retry 3 -o libs/xlsx.full.min.js https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js
+          curl -L --fail --retry 3 -o libs/FileSaver.min.js https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js
+
+      - name: Switch application to local libraries
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js', './libs/jquery.min.js')
+          s = s.replace('https://unpkg.com/xlsx/dist/xlsx.full.min.js', './libs/xlsx.full.min.js')
+          s = s.replace('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js', './libs/FileSaver.min.js')
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Update service worker cache list
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('sw.js')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('const CACHE_NAME = "breakaway-futsal-offline-v2";', 'const CACHE_NAME = "breakaway-futsal-offline-v3";')
+          start = s.find('const EXTERNAL_FILES = [')
+          if start != -1:
+              end = s.find('];', start) + 2
+              s = s[:start] + s[end:].lstrip('\n')
+          marker = '  "./manifest.json"\n];'
+          replacement = '  "./manifest.json",\n  "./libs/jquery.min.js",\n  "./libs/xlsx.full.min.js",\n  "./libs/FileSaver.min.js"\n];'
+          s = s.replace(marker, replacement)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit offline version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html sw.js libs/
+          if git diff --cached --quiet; then
+            echo "No changes needed."
+          else
+            git commit -m "Make app dependencies fully offline [skip ci]"
+            git push
+          fi
