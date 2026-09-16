@@ -11,9 +11,6 @@ const APP_FILES = [
   "./libs/FileSaver.min.js"
 ];
 
-const EXTERNAL_FILES = [];
-
-
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
