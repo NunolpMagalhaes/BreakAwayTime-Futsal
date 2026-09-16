@@ -1,4 +1,4 @@
-const CACHE_NAME = "breakaway-futsal-offline-v6";
+const CACHE_NAME = "breakaway-futsal-offline-v7";
 
 const APP_FILES = [
   "./",
@@ -50,22 +50,6 @@ self.addEventListener("fetch", event => {
     }
 
     if (!response) throw new Error("Offline resource unavailable");
-
-    // Do not use display:none for the file inputs. On some Android PWA/WebView
-    // configurations that prevents the native file picker from opening offline.
-    if (new URL(request.url).pathname.endsWith("/style.css")) {
-      const css = await response.text();
-      const fixedCss = css.replace(
-        ".head-input { display: none; }",
-        ".head-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }\n.load-file { position: relative; }"
-      );
-      return new Response(fixedCss, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: { "Content-Type": "text/css; charset=utf-8" }
-      });
-    }
-
     return response;
   })());
 });
