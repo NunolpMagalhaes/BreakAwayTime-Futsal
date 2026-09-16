@@ -1,4 +1,4 @@
-const CACHE_NAME = "breakaway-futsal-offline-v1";
+const CACHE_NAME = "breakaway-futsal-offline-v2";
 
 const APP_FILES = [
   "./",
@@ -18,8 +18,7 @@ self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
 
-    // Cache the local application files first. If one is missing,
-    // the service worker installation must not break the application.
+    // Keep the application files available offline.
     for (const file of APP_FILES) {
       try {
         await cache.add(file);
@@ -28,8 +27,7 @@ self.addEventListener("install", event => {
       }
     }
 
-    // Cache the existing external libraries so the current application
-    // can continue to use them without changing its JavaScript logic.
+    // Keep the libraries currently used by the application available offline.
     for (const url of EXTERNAL_FILES) {
       try {
         const response = await fetch(url, { mode: "no-cors", cache: "no-cache" });
@@ -67,8 +65,9 @@ self.addEventListener("fetch", event => {
     try {
       const response = await fetch(request);
 
-      // Keep local application resources available for future offline use.
-      if (new URL(request.url).origin === self.location.origin && response.ok) {
+      // Cache resources from the application and its external libraries so
+      // that anything successfully loaded while online can also be reused offline.
+      if (response.ok || response.type === "opaque") {
         const cache = await caches.open(CACHE_NAME);
         await cache.put(request, response.clone());
       }
