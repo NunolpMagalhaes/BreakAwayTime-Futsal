@@ -113,7 +113,11 @@ function sendStatToGoogle(rowNo, key, delta, newValue) {
     }
 
     var payload = {
-        jogo: struct_match.numeroJogo || struct_match.jogo || "",
+        jogo: struct_match.matchNumber || "",
+        adversario: struct_match.adversary || "",
+        data: struct_match.date || "",
+        competicao: struct_match.competition || "",
+        jornada: struct_match.stage || "",
         periodo: struct_time.period || "",
         equipa: struct_team.name || "",
         jogadora: player.pid || player.pno || player.nlast || rowNo,
@@ -163,6 +167,8 @@ var struct_time = { // Time Container
     "stoptgl": 0
 }
 var struct_match = { // Match Information Container
+    "matchNumber": "",
+    "adversary": "",
     "date": ['00', '00', '00'], // YYYY-MM-DD
     "location": "Stadium",
     "competition": "Competition",
@@ -1178,8 +1184,10 @@ function loadTeamInfo() {
         cfg[key] = row[1];
       }
 
+      var matchNumber = getCfgValue(cfg, ["match number", "numero jogo", "nº jogo", "número jogo", "jogo nº", "jogo numero"], "");
       var homeTeam = getCfgValue(cfg, ["home team", "equipa casa", "equipa da casa"], "");
       var awayTeam = getCfgValue(cfg, ["away team", "equipa de fora", "equipa fora"], "");
+      var explicitAdversary = getCfgValue(cfg, ["adversary", "adversario", "adversário"], "");
       var competition = getCfgValue(cfg, ["competition", "competição", "competicao"], "");
       var stage = getCfgValue(cfg, ["stage", "jornada"], "");
       var location = getCfgValue(cfg, ["location", "local"], "");
@@ -1190,6 +1198,8 @@ function loadTeamInfo() {
       var awayDisplay = getCfgValue(cfg, ["away display", "display fora", "display equipa fora"], awayTeam);
 
       var matchInfo = {
+        "Match Number": matchNumber,
+        "Adversary": explicitAdversary || "",
         "Home Team": homeTeam,
         "Home Display": homeDisplay,
         "Away Team": awayTeam,
@@ -1262,12 +1272,18 @@ function loadTeamInfo() {
 }
 function updateTeamInfo(mInfo, pInfo) {
     // Match Info
+    struct_match["matchNumber"] = mInfo["Match Number"] || struct_match["matchNumber"] || "";
     struct_match["date"] = mInfo["Match Date"] || struct_match["date"];
     struct_match["location"] = mInfo["Location"] || struct_match["location"];
     struct_match["competition"] = mInfo["Competition"] || struct_match["competition"];
     struct_match["stage"] = mInfo["Stage"] || struct_match["stage"];
     struct_match["kickoff"] = mInfo["Kick Off Time"] || struct_match["kickoff"];
     struct_match["teams"] = [mInfo["Home Team"] || struct_match["teams"][0], mInfo["Away Team"] || struct_match["teams"][1]];
+    struct_match["adversary"] = mInfo["Adversary"] || (
+        (mInfo["Team Analyzed"] || struct_team["name"]) == struct_match["teams"][0]
+            ? struct_match["teams"][1]
+            : struct_match["teams"][0]
+    );
     struct_match["initials"] = [mInfo["Home Display"] || struct_match["initials"][0], mInfo["Away Display"] || struct_match["initials"][1]];
 
     // Team Info
@@ -1453,10 +1469,10 @@ btnExport.onclick = function() {
     // Match Info Tab
     var dataMatchInfo = [];
     // Header
-    dataMatchInfo.push(["Team Analyzed", "Date", "Location", "Competition", "Stage", "KickOff",
+    dataMatchInfo.push(["Match Number", "Adversary", "Team Analyzed", "Date", "Location", "Competition", "Stage", "KickOff",
     "Home Team", "Away Team", "Home Initials", "Away Initials", "Goals (Home)", "Goals (Away)"]);
-    dataMatchInfo.push([struct_team["name"], struct_match["date"], struct_match["location"], struct_match["competition"],
-    struct_match["stage"], struct_match["kickoff"], struct_match["teams"][0], struct_match["teams"][1],
+    dataMatchInfo.push([struct_match["matchNumber"], struct_match["adversary"], struct_team["name"], struct_match["date"], struct_match["location"], struct_match["competition"], struct_match["stage"], struct_match["kickoff"],
+    struct_match["teams"][0], struct_match["teams"][1],
     struct_match["initials"][0], struct_match["initials"][1], struct_match["score"][0], struct_match["score"][1]]);
 
     // Team Info Tab
