@@ -98,6 +98,46 @@ var tblStatsBody = document.getElementById("stats-body");
 var playerStats = [];
 var statClickTimers = {};
 
+var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby24qCgCRAagK6OtnN5AC4H4X5hdDGRFpb_uLJJ217j9Wr_jHAcv25275q5HLLepfT6_w/exec";
+
+function sendStatToGoogle(rowNo, key, delta, newValue) {
+    if (!GOOGLE_SCRIPT_URL) return;
+
+    var player = struct_team.players[rowNo - 1] || {};
+    var activePlayers = [];
+
+    for (var i = 0; i < struct_team.players.length; i++) {
+        if (struct_team.players[i].active == 1) {
+            activePlayers.push(struct_team.players[i].pno);
+        }
+    }
+
+    var payload = {
+        jogo: struct_match.numeroJogo || struct_match.jogo || "",
+        periodo: struct_time.period || "",
+        equipa: struct_team.name || "",
+        jogadora: player.pid || player.pno || player.nlast || rowNo,
+        jogadoraNome: player.nlast || "",
+        evento: key,
+        estatistica: key,
+        valor: delta,
+        valorAtual: newValue,
+        extra: "github-app",
+        activePlayers: activePlayers
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
+    }).catch(function(error) {
+        console.error("Erro ao enviar estatística para Google Sheets:", error);
+    });
+}
+
 // Helper
 const arrSum = arr => arr.reduce((a,b) => a + b, 0);
 //#endregion
@@ -823,11 +863,17 @@ function bindStatsPanelEvents() {
 
 function changePlayerStat(rowNo, key, delta) {
     if (!playerStats[rowNo]) return;
-    playerStats[rowNo][key] = Math.max(0, (playerStats[rowNo][key] || 0) + delta);
-    var cell = document.getElementById('stat-' + key + '-' + rowNo);
-    if (cell) cell.innerHTML = playerStats[rowNo][key];
-}
 
+    playerStats[rowNo][key] = Math.max(0, (playerStats[rowNo][key] || 0) + delta);
+
+    var newValue = playerStats[rowNo][key];
+
+    var cell = document.getElementById('stat-' + key + '-' + rowNo);
+    if (cell) cell.innerHTML = newValue;
+
+    // Envia imediatamente a alteração para o Google Sheets.
+    sendStatToGoogle(rowNo, key, delta, newValue);
+}
 function updateStatsPanel() {
     if (!tblStatsBody) return;
     for (var i = 1; i <= struct_team.players.length; i++) {
